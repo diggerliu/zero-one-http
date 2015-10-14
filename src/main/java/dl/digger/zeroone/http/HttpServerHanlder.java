@@ -11,6 +11,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import dl.digger.zeroone.http.util.Utils;
+
 @Sharable
 @Service
 public class HttpServerHanlder extends SimpleChannelInboundHandler<HttpRequest> {
@@ -32,7 +34,7 @@ public class HttpServerHanlder extends SimpleChannelInboundHandler<HttpRequest> 
 	public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause)
 			throws Exception {
 		logger.error("HttpServerHanlder error",cause);
-		ctx.writeAndFlush(config.INTERNAL_SERVER_ERROR_RESP);
+		ctx.writeAndFlush(Utils.INTERNAL_SERVER_ERROR_RESP);
 		ctx.close();
 	}
 }

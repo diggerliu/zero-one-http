@@ -1,6 +1,5 @@
 package dl.digger.zeroone.http;
 
-import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
@@ -14,8 +13,6 @@ import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpRequestDecoder;
 import io.netty.handler.codec.http.HttpResponseEncoder;
-import io.netty.handler.codec.http.HttpResponseStatus;
-import io.netty.handler.codec.http.HttpVersion;
 
 import java.io.File;
 import java.net.InetSocketAddress;
@@ -35,20 +32,22 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.PropertySource;
+import org.springframework.context.annotation.PropertySources;
 import org.springframework.context.support.PropertySourcesPlaceholderConfigurer;
+import org.springframework.core.env.Environment;
 import org.springframework.util.StringUtils;
 
 import dl.digger.zeroone.http.exception.CmdException;
-import dl.digger.zeroone.http.out.HtmlOut;
 import dl.digger.zeroone.http.out.JsonOut;
+import dl.digger.zeroone.http.out.NoOut;
 import dl.digger.zeroone.http.out.Out;
 import dl.digger.zeroone.http.out.annotation.HttpConfig;
-import dl.digger.zeroone.http.util.ZeroOneErrorCode;
-import dl.digger.zeroone.http.util.ZeroOneUtil;
+import dl.digger.zeroone.http.util.ErrorCode;
+import dl.digger.zeroone.http.util.Utils;
 
 @ComponentScan
 @Configuration
-@PropertySource(value = "classpath:zero-one-http.properties", name = "zero-one")
+@PropertySources(value = {@PropertySource(value="classpath:zero-one-http.properties",name="zero-one")})
 public class HttpServerConfig {
 
 	final Logger logger = LoggerFactory.getLogger(HttpServerConfig.class);
@@ -71,6 +70,9 @@ public class HttpServerConfig {
 	private ApplicationContext context;
 	private LinkedBlockingQueue<CmdHttpContext> liveCmds;
 
+	@Autowired
+    private Environment env;
+	
 	public HttpServerInitializer getInitializer() {
 		return initializer;
 	}
@@ -115,10 +117,10 @@ public class HttpServerConfig {
 				}
 				uriMaps.put(id, adapter);
 			}
-			logger.error(
-					"\n#####################################\nuriMaps:{}\n#####################################\n",
-					uriMaps.keySet());
 		}
+		logger.error(
+				"\n#####################################\nuriMaps:{}\n#####################################\n",
+				uriMaps.keySet());
 		liveCmds = new LinkedBlockingQueue<CmdHttpContext>(
 				this.max_live_context);
 		initializer.init();
@@ -128,15 +130,6 @@ public class HttpServerConfig {
 			service.execute(new Task());
 		}
 	}
-
-	public final DefaultFullHttpResponse NOT_FOUND_RESP = new DefaultFullHttpResponse(
-			HttpVersion.HTTP_1_1, HttpResponseStatus.NOT_FOUND);
-	public final DefaultFullHttpResponse INTERNAL_SERVER_ERROR_RESP = new DefaultFullHttpResponse(
-			HttpVersion.HTTP_1_1, HttpResponseStatus.INTERNAL_SERVER_ERROR);
-	public final DefaultFullHttpResponse NOT_IMPLEMENTED_RESP = new DefaultFullHttpResponse(
-			HttpVersion.HTTP_1_1, HttpResponseStatus.NOT_IMPLEMENTED);
-
-	private final byte[] EMPTY_BYTE = new byte[0];
 
 	public class Task implements Runnable {
 
@@ -150,7 +143,7 @@ public class HttpServerConfig {
 				}
 				if (context != null) {
 					CmdHttpAdapter adapter = context.getAdapter();
-					int code = ZeroOneErrorCode.OK;
+					int code = ErrorCode.OK;
 					Object result_obj = null;
 					String msg = null;
 					Map<String, Object> result = null;
@@ -164,18 +157,21 @@ public class HttpServerConfig {
 						msg = e.getMsg();
 					} catch (Exception e) {
 						logger.error("unkown error", e);
-						code = ZeroOneErrorCode.CMD_SERVICE_UNKNOW_ERROR;
+						code = ErrorCode.CMD_SERVICE_UNKNOW_ERROR;
 						msg = e.getMessage();
 					} finally {
-						result = ZeroOneUtil
-								.getResultMap(code, result_obj, msg);
-						adapter.out(result, context);
-						// TODO 流水日志
+
+						if (adapter.getOut() instanceof NoOut) {
+							result = Utils.getResultMap(code, result_obj, msg);
+							adapter.out(result, context);
+						}
 						DefaultFullHttpResponse respnose = context
-								.getResponse();
+								.getResponse().getDefaultFullHttpResponse();
+						// TODO 流水日志
+						ACCESS_LOGGER.info("200,{},{},{}", code, context, msg);
+
 						ChannelFuture future = context.getCtx().writeAndFlush(
 								respnose);
-						ACCESS_LOGGER.info("200,{},{},{}", code, context, msg);
 						boolean keepAlive = HttpHeaders.isKeepAlive(context
 								.getRequest().getRequest());
 						if (keepAlive) {
@@ -200,8 +196,8 @@ public class HttpServerConfig {
 		if (uriMaps == null) {
 			// TODO logger
 			ACCESS_LOGGER.error("501,id={} is not found!!", id);
-			ctx.writeAndFlush(NOT_IMPLEMENTED_RESP);
-			ChannelFuture future = ctx.writeAndFlush(NOT_FOUND_RESP);
+			ctx.writeAndFlush(Utils.NOT_IMPLEMENTED_RESP);
+			ChannelFuture future = ctx.writeAndFlush(Utils.NOT_FOUND_RESP);
 			if (future.isDone()) {
 				future.addListener(ChannelFutureListener.CLOSE);
 			}
@@ -212,19 +208,18 @@ public class HttpServerConfig {
 		if (adapter == null) {
 			// TODO logger
 			ACCESS_LOGGER.info("404,id={} is not found!!", id);
-			ChannelFuture future = ctx.writeAndFlush(NOT_FOUND_RESP);
+			ChannelFuture future = ctx.writeAndFlush(Utils.NOT_FOUND_RESP);
 			if (future.isDone()) {
 				future.addListener(ChannelFutureListener.CLOSE);
 			}
 			return;
 		}
+
 		checkRequest(adapter, request);
+
 		// TODO 是否要切到directBuffer
-		DefaultFullHttpResponse response = new DefaultFullHttpResponse(
-				HttpVersion.HTTP_1_1, HttpResponseStatus.OK,
+		ZeroOneHttpResponse response = new ZeroOneHttpResponse(
 				Unpooled.buffer(512));// 默认给512个字节
-		// HttpHeaders headers = response.headers();
-		// headers.add();
 
 		CmdHttpContext context = new CmdHttpContext(request, response, adapter,
 				ctx);
@@ -264,7 +259,7 @@ public class HttpServerConfig {
 			return new InetSocketAddress(this.ip, this.port);
 		}
 		if (this.nic != null) {
-			String ip = ZeroOneUtil.resolveNicAddr(this.nic);
+			String ip = Utils.resolveNicAddr(this.nic);
 			return new InetSocketAddress(ip, this.port);
 		}
 		return new InetSocketAddress(this.port);
@@ -310,6 +305,10 @@ public class HttpServerConfig {
 
 	public int getMax_live_context() {
 		return max_live_context;
+	}
+
+	public Environment getEnv() {
+		return env;
 	}
 
 }

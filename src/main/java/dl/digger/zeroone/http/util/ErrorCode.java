@@ -1,6 +1,6 @@
 package dl.digger.zeroone.http.util;
 
-public interface ZeroOneErrorCode {
+public interface ErrorCode {
 
 	
 	public final static int OK = 0;

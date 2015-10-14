@@ -1,17 +1,16 @@
 package dl.digger.zeroone.http;
 
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.http.DefaultFullHttpResponse;
 
 public class CmdHttpContext {
 	private ZeroOneHttpRequest request;
-	private DefaultFullHttpResponse response;
+	private ZeroOneHttpResponse response;
 	private long startTime;
 	private CmdHttpAdapter adapter;
 	private ChannelHandlerContext ctx;
 
 	public CmdHttpContext(ZeroOneHttpRequest request,
-			DefaultFullHttpResponse response, CmdHttpAdapter adapter,ChannelHandlerContext ctx) {
+			ZeroOneHttpResponse response, CmdHttpAdapter adapter,ChannelHandlerContext ctx) {
 		super();
 		this.request = request;
 		this.response = response;
@@ -28,11 +27,11 @@ public class CmdHttpContext {
 		return sb.toString();
 	}
 
-	public DefaultFullHttpResponse getResponse() {
+	public ZeroOneHttpResponse getResponse() {
 		return response;
 	}
 
-	public void setResponse(DefaultFullHttpResponse response) {
+	public void setResponse(ZeroOneHttpResponse response) {
 		this.response = response;
 	}
 

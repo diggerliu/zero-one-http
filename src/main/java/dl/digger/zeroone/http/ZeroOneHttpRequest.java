@@ -26,7 +26,7 @@ import org.springframework.aop.ThrowsAdvice;
 import org.springframework.util.StringUtils;
 
 import dl.digger.zeroone.http.exception.CmdException;
-import dl.digger.zeroone.http.util.ZeroOneErrorCode;
+import dl.digger.zeroone.http.util.ErrorCode;
 
 public class ZeroOneHttpRequest {
 
@@ -36,6 +36,7 @@ public class ZeroOneHttpRequest {
 	private HttpRequest request;
 	private String uri;
 	private String path;
+	private Map<String, List<Cookie>> cookies;
 
 	public ZeroOneHttpRequest(HttpRequest request) throws IOException {
 		this.request = request;
@@ -57,7 +58,26 @@ public class ZeroOneHttpRequest {
 		} else {
 			this.params = Collections.EMPTY_MAP;
 		}
+		initCookies();
+	}
 
+	private void initCookies() {
+		this.cookies = new HashMap<String, List<Cookie>>();
+		String cookieString = HttpHeaders.getHeader(this.request,
+				HttpHeaders.Names.COOKIE);
+		if (cookieString != null) {
+			Set<Cookie> cookies = ServerCookieDecoder.LAX.decode(cookieString);
+			if (!cookies.isEmpty()) {
+				for (Cookie cookie : cookies) {
+					List<Cookie> list = this.cookies.get(cookie.name());
+					if(list==null){
+						list = new ArrayList<Cookie>();
+						this.cookies.put(cookie.name(), list);
+					}
+					list.add(cookie);
+				}
+			}
+		}
 	}
 
 	private Map<String, List<String>> initParametersByPost(
@@ -86,10 +106,9 @@ public class ZeroOneHttpRequest {
 		}
 		return params;
 	}
-	
-	public String getReferer(){
-		return HttpHeaders.getHeader(this.request,
-				HttpHeaders.Names.REFERER);
+
+	public String getReferer() {
+		return HttpHeaders.getHeader(this.request, HttpHeaders.Names.REFERER);
 	}
 
 	public Map<String, List<String>> getAllParams() {
@@ -99,13 +118,15 @@ public class ZeroOneHttpRequest {
 	public String getUri() {
 		return uri;
 	}
+
 	public String getReqId() {
 		String uri = this.path;
-		if(uri.length()>2&&uri.charAt(uri.length()-1)=='/'){
-			uri = uri.substring(0,uri.length()-1);
+		if (uri.length() > 2 && uri.charAt(uri.length() - 1) == '/') {
+			uri = uri.substring(0, uri.length() - 1);
 		}
 		return uri;
 	}
+
 	public String getProtocolVersion() {
 		return this.request.getProtocolVersion().text();
 	}
@@ -136,14 +157,14 @@ public class ZeroOneHttpRequest {
 
 	public int getIntParam(String key, int defaultValue) throws CmdException {
 		String param = getStringParam(key, "0");
-		if(param==null){
+		if (param == null) {
 			return defaultValue;
 		}
 		int param_int = defaultValue;
 		try {
 			param_int = Integer.valueOf(param);
 		} catch (NumberFormatException e) {
-			throw new CmdException(ZeroOneErrorCode.CMD_PARAM_ERROR, key + " error");
+			throw new CmdException(ErrorCode.CMD_PARAM_ERROR, key + " error");
 		}
 		return param_int;
 	}
@@ -152,18 +173,19 @@ public class ZeroOneHttpRequest {
 		return getIntegerParam(key, null);
 	}
 
-	public Integer getIntegerParam(String key, Integer defaultValue) throws CmdException {
+	public Integer getIntegerParam(String key, Integer defaultValue)
+			throws CmdException {
 		String defaultValue_str = defaultValue == null ? null : defaultValue
 				.toString();
 		String param = getStringParam(key, defaultValue_str);
-		if(param==null){
+		if (param == null) {
 			return defaultValue;
 		}
 		Integer param_int = defaultValue;
 		try {
 			param_int = Integer.valueOf(param);
 		} catch (NumberFormatException e) {
-			throw new CmdException(ZeroOneErrorCode.CMD_PARAM_ERROR, key + " error");
+			throw new CmdException(ErrorCode.CMD_PARAM_ERROR, key + " error");
 		}
 		return param_int;
 	}
@@ -173,18 +195,15 @@ public class ZeroOneHttpRequest {
 				HttpHeaders.Names.CONTENT_TYPE);
 	}
 
-	public Set<Cookie> getCookies() {
-		String cookieString = HttpHeaders.getHeader(this.request,
-				HttpHeaders.Names.COOKIE);
-		if (cookieString != null) {
-			Set<Cookie> cookies = ServerCookieDecoder.LAX.decode(cookieString);
-			if (!cookies.isEmpty()) {
-				return cookies;
-			}
-		}
-		return null;
+
+	public Map<String, List<Cookie>> getCookies() {
+		return this.cookies;
 	}
 
+	public List<Cookie> getCookie(String name){
+		return this.cookies.get(name);
+	}
+	
 	public HttpRequest getRequest() {
 		return request;
 	}

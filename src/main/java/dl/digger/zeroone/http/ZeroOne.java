@@ -19,9 +19,31 @@ public class ZeroOne {
 	private HttpServerConfig config;
 
 	public ZeroOne(final Class<?>... classes) {
-		this(new DefaultHttpServerInitializer(),classes);
+		this(new DefaultHttpServerInitializer(), classes);
 	}
-	
+
+	public ZeroOne(final String... scanpackage) {
+		this(new DefaultHttpServerInitializer(), scanpackage);
+	}
+
+	public ZeroOne(HttpServerInitializer initializer,
+			final String... scanpackage) {
+		if (scanpackage == null || scanpackage.length == 0) {
+			this.context = new AnnotationConfigApplicationContext(
+					HttpServerConfig.class);
+		} else {
+			String[] classes_new = new String[scanpackage.length + 1];
+			classes_new[0] = ZeroOne.class.getPackage().getName();
+			int index = 1;
+			for (String c : scanpackage) {
+				classes_new[index++] = c;
+			}
+			this.context = new AnnotationConfigApplicationContext(classes_new);
+		}
+		this.config = context.getBean(HttpServerConfig.class);
+		this.config.init(context, initializer);
+	}
+
 	public ZeroOne(HttpServerInitializer initializer, final Class<?>... classes) {
 		if (classes == null || classes.length == 0) {
 			this.context = new AnnotationConfigApplicationContext(
@@ -36,9 +58,8 @@ public class ZeroOne {
 			this.context = new AnnotationConfigApplicationContext(classes_new);
 		}
 		this.config = context.getBean(HttpServerConfig.class);
-		this.config.init(context,initializer);
+		this.config.init(context, initializer);
 	}
-	
 
 	public void start() {
 		ServerBootstrap bootstrap = new ServerBootstrap();
@@ -61,12 +82,10 @@ public class ZeroOne {
 			logger.error("start exception,system will exit!!", e);
 			System.exit(1);
 		} finally {
-			logger.error("\n#@##@##@##@##@##@##@##@#~_~Zero-One-HTTP-Server on port {}~_~#@##@##@##@##@##@##@##@#\n", bindAddr.getPort());
+			logger.error(
+					"\n#@##@##@##@##@##@##@##@#~_~Zero-One-HTTP-Server on port {}~_~#@##@##@##@##@##@##@##@#\n",
+					bindAddr.getPort());
 		}
 	}
 
-	public static void main(String[] args) {
-		ZeroOne app = new ZeroOne();
-		app.start();
-	}
 }

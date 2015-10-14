@@ -1,8 +1,5 @@
 package dl.digger.zeroone.http.out;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.handler.codec.http.DefaultFullHttpResponse;
-
 import java.io.File;
 import java.io.IOException;
 import java.io.StringWriter;
@@ -15,7 +12,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import dl.digger.zeroone.http.CmdHttpContext;
-import dl.digger.zeroone.http.ZeroOneHttpRequest;
+import dl.digger.zeroone.http.ZeroOneHttpResponse;
 import freemarker.template.Configuration;
 import freemarker.template.DefaultObjectWrapper;
 import freemarker.template.Template;
@@ -37,21 +34,18 @@ public class HtmlOut implements Out {
 	}
 
 	public void out(Map<String, Object> result, CmdHttpContext context) {
-		
-		ZeroOneHttpRequest request = context.getRequest();
-		DefaultFullHttpResponse response = context.getResponse();
-		ByteBuf content = response.content();
+		ZeroOneHttpResponse response = context.getResponse();
 		try {
-			Template template = config.getTemplate(context.getAdapter().getTemplate(), "UTF-8");
+			Template template = config.getTemplate(context.getAdapter()
+					.getTemplate(), "UTF-8");
 			StringWriter out = new StringWriter();
 			template.process(result, out);
-			content.writeBytes(out.toString().getBytes(request.getCharacterEncoding()));
+			response.write(out.toString());
 		} catch (Exception e) {
-			logger.error("HtmlOut error",e);
-			content.writeBytes("html out error".getBytes());
+			logger.error("HtmlOut error", e);
+			response.write("html out error".getBytes());
 		}
-		//template.process(obj, out);
+		// template.process(obj, out);
 	}
-
 
 }

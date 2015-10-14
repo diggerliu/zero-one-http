@@ -6,6 +6,6 @@ import dl.digger.zeroone.http.CmdHttpContext;
 
 public interface Out {
 
-	public void out(Map<String,Object> obj,CmdHttpContext context);
-	
+	public void out(Map<String, Object> obj, CmdHttpContext context);
+
 }
