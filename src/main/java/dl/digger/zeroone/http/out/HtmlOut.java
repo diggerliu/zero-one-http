@@ -1,5 +1,7 @@
 package dl.digger.zeroone.http.out;
 
+import io.netty.handler.codec.http.HttpHeaders;
+
 import java.io.File;
 import java.io.IOException;
 import java.io.StringWriter;
@@ -24,7 +26,7 @@ public class HtmlOut implements Out {
 	final Logger logger = LoggerFactory.getLogger(getClass());
 	@Value("${zero.one.server.http.freemarker.template:/data/template}")
 	private String template;
-
+	public static final String CONTENT_TYPE = "text/html;charset=";
 	@Autowired
 	private void init() throws IOException {
 		config = new Configuration(Configuration.VERSION_2_3_23);
@@ -35,9 +37,11 @@ public class HtmlOut implements Out {
 
 	public void out(Map<String, Object> result, CmdHttpContext context) {
 		ZeroOneHttpResponse response = context.getResponse();
+		response.setHeader(HttpHeaders.Names.CONTENT_TYPE, CONTENT_TYPE
+				+ response.getCharacterEncoding());
 		try {
 			Template template = config.getTemplate(context.getAdapter()
-					.getTemplate(), "UTF-8");
+					.getTemplate(), response.getCharacterEncoding());
 			StringWriter out = new StringWriter();
 			template.process(result, out);
 			response.write(out.toString());

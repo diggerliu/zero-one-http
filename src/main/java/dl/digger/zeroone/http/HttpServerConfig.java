@@ -161,7 +161,7 @@ public class HttpServerConfig {
 						msg = e.getMessage();
 					} finally {
 
-						if (adapter.getOut() instanceof NoOut) {
+						if (!(adapter.getOut() instanceof NoOut)) {
 							result = Utils.getResultMap(code, result_obj, msg);
 							adapter.out(result, context);
 						}

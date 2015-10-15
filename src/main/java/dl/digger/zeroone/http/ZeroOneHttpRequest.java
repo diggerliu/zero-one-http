@@ -156,7 +156,7 @@ public class ZeroOneHttpRequest {
 	}
 
 	public int getIntParam(String key, int defaultValue) throws CmdException {
-		String param = getStringParam(key, "0");
+		String param = getStringParam(key);
 		if (param == null) {
 			return defaultValue;
 		}
@@ -175,9 +175,7 @@ public class ZeroOneHttpRequest {
 
 	public Integer getIntegerParam(String key, Integer defaultValue)
 			throws CmdException {
-		String defaultValue_str = defaultValue == null ? null : defaultValue
-				.toString();
-		String param = getStringParam(key, defaultValue_str);
+		String param = getStringParam(key);
 		if (param == null) {
 			return defaultValue;
 		}

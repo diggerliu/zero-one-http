@@ -10,7 +10,7 @@ import dl.digger.zeroone.http.CmdHttpContext;
 import dl.digger.zeroone.http.ZeroOneHttpResponse;
 
 @Service
-public class TextOut implements Out {
+public class XmlOut implements Out {
 
 	
 	public static final String CONTENT_TYPE = "text/plain;charset=";

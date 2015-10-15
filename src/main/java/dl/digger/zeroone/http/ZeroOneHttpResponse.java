@@ -13,11 +13,13 @@ import java.nio.charset.Charset;
 
 import org.springframework.util.StringUtils;
 
+import dl.digger.zeroone.http.util.Utils;
+
 public class ZeroOneHttpResponse {
 
 	private final DefaultFullHttpResponse response;
 	private final ByteBuf content;
-	private String characterEncoding = "UTF-8";
+	private String characterEncoding = Utils.DEFAULT_CHARACTERENCODING;
 
 	public ZeroOneHttpResponse() {
 		this(Unpooled.buffer(0));
@@ -27,6 +29,7 @@ public class ZeroOneHttpResponse {
 		this.content = content;
 		this.response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,
 				HttpResponseStatus.OK, content);
+		setHeader(HttpHeaders.Names.CONTENT_TYPE, "text/html;charset=utf-8");
 	}
 
 	public void sendError(int sc) throws IOException {
@@ -101,6 +104,7 @@ public class ZeroOneHttpResponse {
 
 	public void setCharacterEncoding(String characterEncoding) {
 		this.characterEncoding = characterEncoding;
+		setHeader(HttpHeaders.Names.CONTENT_ENCODING, characterEncoding);
 	}
 
 }

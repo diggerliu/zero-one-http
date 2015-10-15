@@ -3,10 +3,12 @@ package dl.digger.zeroone.http.util;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
+import io.netty.util.CharsetUtil;
 
 import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
+import java.nio.charset.Charset;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Map;
@@ -21,6 +23,9 @@ public class Utils {
 			HttpVersion.HTTP_1_1, HttpResponseStatus.NOT_IMPLEMENTED);
 	public final byte[] EMPTY_BYTE = new byte[0];
 
+	public static String DEFAULT_CHARACTERENCODING = "UTF-8";
+	public static Charset DEFAULT_CHARSET = Charset.forName(DEFAULT_CHARACTERENCODING);
+	
 	public static String resolveNicAddr(String nic) {
 		try {
 			NetworkInterface ni = NetworkInterface.getByName(nic);

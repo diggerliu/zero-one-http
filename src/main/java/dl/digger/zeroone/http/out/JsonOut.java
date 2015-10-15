@@ -1,5 +1,7 @@
 package dl.digger.zeroone.http.out;
 
+import io.netty.handler.codec.http.HttpHeaders;
+
 import java.util.Map;
 
 import org.slf4j.Logger;
@@ -21,9 +23,12 @@ public class JsonOut implements Out {
 	public static final byte[] DEFAULT_OUT_BYTES = "{\"rtn\":0}".getBytes();
 	public static final byte[] ERROR_DEFAULT_OUT_BYTES = "{\"rtn\":1000}"
 			.getBytes();
+	public static final String CONTENT_TYPE = "text/json;charset=";
 
 	public void out(Map<String, Object> result, CmdHttpContext context) {
 		ZeroOneHttpResponse response = context.getResponse();
+		response.setHeader(HttpHeaders.Names.CONTENT_TYPE, CONTENT_TYPE
+				+ response.getCharacterEncoding());
 		try {
 			String str = mapper.writeValueAsString(result);
 			response.write(str);
