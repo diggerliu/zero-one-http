@@ -9,7 +9,7 @@ public class CmdHttpAdapter {
 
 	private String id;
 	private HttpCmd cmd;
-	private int timeout = 1000;// 默认超时时间 1s
+	private int timeout = 1000;// default 1s
 	private Out out;
 	private String referer;
 	private boolean csrf;

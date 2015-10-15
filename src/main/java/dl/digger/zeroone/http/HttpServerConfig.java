@@ -151,7 +151,7 @@ public class HttpServerConfig {
 						Object obj = adapter.process(context);
 						result_obj = obj;
 					} catch (CmdException e) {
-						// TODO 这两个异常是否有必要分开？ 日志、监控？
+						// TODO 
 						logger.error("service error:", e);
 						code = e.getCode();
 						msg = e.getMsg();
@@ -167,7 +167,6 @@ public class HttpServerConfig {
 						}
 						DefaultFullHttpResponse respnose = context
 								.getResponse().getDefaultFullHttpResponse();
-						// TODO 流水日志
 						ACCESS_LOGGER.info("200,{},{},{}", code, context, msg);
 
 						ChannelFuture future = context.getCtx().writeAndFlush(
@@ -217,9 +216,9 @@ public class HttpServerConfig {
 
 		checkRequest(adapter, request);
 
-		// TODO 是否要切到directBuffer
+		// TODO directBuffer ?
 		ZeroOneHttpResponse response = new ZeroOneHttpResponse(
-				Unpooled.buffer(512));// 默认给512个字节
+				Unpooled.buffer(512));// default 512 bytes
 
 		CmdHttpContext context = new CmdHttpContext(request, response, adapter,
 				ctx);
