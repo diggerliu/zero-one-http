@@ -47,7 +47,7 @@ import dl.digger.zeroone.http.util.Utils;
 
 @ComponentScan
 @Configuration
-@PropertySources(value = {@PropertySource(value="classpath:zero-one-http.properties",name="zero-one")})
+@PropertySources(value = { @PropertySource(value = "classpath:zero-one-http.properties", name = "zero-one") })
 public class HttpServerConfig {
 
 	final Logger logger = LoggerFactory.getLogger(HttpServerConfig.class);
@@ -71,8 +71,8 @@ public class HttpServerConfig {
 	private LinkedBlockingQueue<CmdHttpContext> liveCmds;
 
 	@Autowired
-    private Environment env;
-	
+	private Environment env;
+
 	public HttpServerInitializer getInitializer() {
 		return initializer;
 	}
@@ -151,7 +151,7 @@ public class HttpServerConfig {
 						Object obj = adapter.process(context);
 						result_obj = obj;
 					} catch (CmdException e) {
-						// TODO 
+						// TODO
 						logger.error("service error:", e);
 						code = e.getCode();
 						msg = e.getMsg();
@@ -167,7 +167,12 @@ public class HttpServerConfig {
 						}
 						DefaultFullHttpResponse respnose = context
 								.getResponse().getDefaultFullHttpResponse();
-						ACCESS_LOGGER.info("200,{},{},{}", code, context, msg);
+						ACCESS_LOGGER.info(
+								"200,{},{},{},{}",
+								code,
+								System.currentTimeMillis()
+										- context.getStartTime(), context
+										.getRequest().getAllParams(), msg);
 
 						ChannelFuture future = context.getCtx().writeAndFlush(
 								respnose);

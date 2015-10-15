@@ -5,6 +5,8 @@ import io.netty.handler.codec.http.HttpHeaders;
 import java.io.File;
 import java.io.IOException;
 import java.io.StringWriter;
+import java.net.URL;
+import java.util.Enumeration;
 import java.util.Map;
 
 import org.slf4j.Logger;
@@ -27,10 +29,21 @@ public class HtmlOut implements Out {
 	@Value("${zero.one.server.http.freemarker.template:/data/template}")
 	private String template;
 	public static final String CONTENT_TYPE = "text/html;charset=";
+
 	@Autowired
 	private void init() throws IOException {
 		config = new Configuration(Configuration.VERSION_2_3_23);
-		config.setDirectoryForTemplateLoading(new File(template));
+
+		if (template.startsWith(File.separator)) {
+			config.setDirectoryForTemplateLoading(new File(template));
+		} else {
+			Enumeration<URL> urls = getClass().getClassLoader().getResources(
+					template);
+			while (urls.hasMoreElements()) {
+				URL url = urls.nextElement();
+				config.setDirectoryForTemplateLoading(new File(url.getFile()));
+			}
+		}
 		config.setObjectWrapper(new DefaultObjectWrapper(
 				Configuration.DEFAULT_INCOMPATIBLE_IMPROVEMENTS));
 	}

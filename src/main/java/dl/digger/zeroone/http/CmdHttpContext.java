@@ -10,7 +10,8 @@ public class CmdHttpContext {
 	private ChannelHandlerContext ctx;
 
 	public CmdHttpContext(ZeroOneHttpRequest request,
-			ZeroOneHttpResponse response, CmdHttpAdapter adapter,ChannelHandlerContext ctx) {
+			ZeroOneHttpResponse response, CmdHttpAdapter adapter,
+			ChannelHandlerContext ctx) {
 		super();
 		this.request = request;
 		this.response = response;
@@ -20,10 +21,11 @@ public class CmdHttpContext {
 	}
 
 	@Override
-	public String toString(){
+	public String toString() {
 		StringBuilder sb = new StringBuilder();
-		sb.append(System.currentTimeMillis()-startTime).append(",").append(request.toString());
-		
+		sb.append(System.currentTimeMillis() - startTime).append(",")
+				.append(request.toString()).append(",");
+
 		return sb.toString();
 	}
 
@@ -43,37 +45,25 @@ public class CmdHttpContext {
 		this.startTime = startTime;
 	}
 
-
-
 	public ZeroOneHttpRequest getRequest() {
 		return request;
 	}
-
-
 
 	public void setRequest(ZeroOneHttpRequest request) {
 		this.request = request;
 	}
 
-
-
 	public CmdHttpAdapter getAdapter() {
 		return adapter;
 	}
-
-
 
 	public void setAdapter(CmdHttpAdapter adapter) {
 		this.adapter = adapter;
 	}
 
-
-
 	public ChannelHandlerContext getCtx() {
 		return ctx;
 	}
-
-
 
 	public void setCtx(ChannelHandlerContext ctx) {
 		this.ctx = ctx;

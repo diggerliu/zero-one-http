@@ -70,7 +70,7 @@ public class ZeroOneHttpRequest {
 			if (!cookies.isEmpty()) {
 				for (Cookie cookie : cookies) {
 					List<Cookie> list = this.cookies.get(cookie.name());
-					if(list==null){
+					if (list == null) {
 						list = new ArrayList<Cookie>();
 						this.cookies.put(cookie.name(), list);
 					}
@@ -193,15 +193,14 @@ public class ZeroOneHttpRequest {
 				HttpHeaders.Names.CONTENT_TYPE);
 	}
 
-
 	public Map<String, List<Cookie>> getCookies() {
 		return this.cookies;
 	}
 
-	public List<Cookie> getCookie(String name){
+	public List<Cookie> getCookie(String name) {
 		return this.cookies.get(name);
 	}
-	
+
 	public HttpRequest getRequest() {
 		return request;
 	}
