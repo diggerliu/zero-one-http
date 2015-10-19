@@ -3,7 +3,6 @@ package dl.digger.zeroone.http.util;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
-import io.netty.util.CharsetUtil;
 
 import java.net.Inet4Address;
 import java.net.InetAddress;
@@ -24,8 +23,9 @@ public class Utils {
 	public final byte[] EMPTY_BYTE = new byte[0];
 
 	public static String DEFAULT_CHARACTERENCODING = "UTF-8";
-	public static Charset DEFAULT_CHARSET = Charset.forName(DEFAULT_CHARACTERENCODING);
-	
+	public static Charset DEFAULT_CHARSET = Charset
+			.forName(DEFAULT_CHARACTERENCODING);
+
 	public static String resolveNicAddr(String nic) {
 		try {
 			NetworkInterface ni = NetworkInterface.getByName(nic);
@@ -56,4 +56,26 @@ public class Utils {
 		return result;
 	}
 
+	public static final String getCharsetFromContentType(String contentType) {
+
+		if (contentType == null) {
+			return (null);
+		}
+		int start = contentType.indexOf("charset=");
+		if (start < 0) {
+			return (null);
+		}
+		String encoding = contentType.substring(start + 8);
+		int end = encoding.indexOf(';');
+		if (end >= 0) {
+			encoding = encoding.substring(0, end);
+		}
+		encoding = encoding.trim();
+		if ((encoding.length() > 2) && (encoding.startsWith("\""))
+				&& (encoding.endsWith("\""))) {
+			encoding = encoding.substring(1, encoding.length() - 1);
+		}
+		return (encoding.trim());
+
+	}
 }

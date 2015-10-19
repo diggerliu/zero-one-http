@@ -223,7 +223,7 @@ public class HttpServerConfig {
 
 		// TODO directBuffer ?
 		ZeroOneHttpResponse response = new ZeroOneHttpResponse(
-				Unpooled.buffer(512));// default 512 bytes
+				Unpooled.buffer(0));// default 512 bytes
 
 		CmdHttpContext context = new CmdHttpContext(request, response, adapter,
 				ctx);

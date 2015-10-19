@@ -1,5 +1,6 @@
 package dl.digger.zeroone.http;
 
+import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpRequest;
@@ -8,13 +9,13 @@ import io.netty.handler.codec.http.cookie.Cookie;
 import io.netty.handler.codec.http.cookie.ServerCookieDecoder;
 import io.netty.handler.codec.http.multipart.Attribute;
 import io.netty.handler.codec.http.multipart.DefaultHttpDataFactory;
+import io.netty.handler.codec.http.multipart.FileUpload;
 import io.netty.handler.codec.http.multipart.HttpPostRequestDecoder;
 import io.netty.handler.codec.http.multipart.InterfaceHttpData;
 
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -22,42 +23,45 @@ import java.util.Set;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.aop.ThrowsAdvice;
 import org.springframework.util.StringUtils;
 
 import dl.digger.zeroone.http.exception.CmdException;
 import dl.digger.zeroone.http.util.ErrorCode;
+import dl.digger.zeroone.http.util.Utils;
 
 public class ZeroOneHttpRequest {
 
 	final Logger logger = LoggerFactory.getLogger(getClass());
-	private Map<String, List<String>> params;
+	private Map<String, List<String>> params = new HashMap<String, List<String>>();
+	private Map<String, List<FileItem>> files;
 	private String characterEncoding;
 	private HttpRequest request;
 	private String uri;
 	private String path;
 	private Map<String, List<Cookie>> cookies;
+	private static final DefaultHttpDataFactory httpPostRequestDecoderFactory = new DefaultHttpDataFactory(
+			DefaultHttpDataFactory.MINSIZE);
 
 	public ZeroOneHttpRequest(HttpRequest request) throws IOException {
 		this.request = request;
-		this.characterEncoding = getContentType();
+		this.characterEncoding = Utils
+				.getCharsetFromContentType(getContentType());
 		if (StringUtils.isEmpty(this.characterEncoding)) {
-			this.characterEncoding = "UTF-8";
+			this.characterEncoding = Utils.DEFAULT_CHARACTERENCODING;
 		}
+		System.out.println(this.characterEncoding);
 		QueryStringDecoder queryStringDecoder = new QueryStringDecoder(
 				request.getUri(), Charset.forName(this.characterEncoding));
 		this.path = queryStringDecoder.path();
 		this.uri = queryStringDecoder.uri();
-		if (request.getMethod().equals(HttpMethod.GET)) {
-			this.params = queryStringDecoder.parameters();
-		} else if (request.getMethod().equals(HttpMethod.POST)) {
+		if (request.getMethod().equals(HttpMethod.POST)) {
 			HttpPostRequestDecoder httpPostRequestDecoder = new HttpPostRequestDecoder(
-					new DefaultHttpDataFactory(DefaultHttpDataFactory.MINSIZE),
-					request, Charset.forName(this.characterEncoding));
-			this.params = initParametersByPost(httpPostRequestDecoder);
-		} else {
-			this.params = Collections.EMPTY_MAP;
+					httpPostRequestDecoderFactory, request,
+					Charset.forName(this.characterEncoding));
+			initParametersByPost(httpPostRequestDecoder);
+
 		}
+		this.params.putAll(queryStringDecoder.parameters());
 		initCookies();
 	}
 
@@ -80,11 +84,30 @@ public class ZeroOneHttpRequest {
 		}
 	}
 
-	private Map<String, List<String>> initParametersByPost(
+	public static class FileItem {
+		public String filename;
+		public ByteBuf content;
+		public String content_type;
+		public int size;
+
+		public FileItem(String filename, ByteBuf content, String content_type,
+				int size) {
+			super();
+			this.filename = filename;
+			this.content = content;
+			this.content_type = content_type;
+			this.size = size;
+		}
+
+	}
+
+	private void initParametersByPost(
 			HttpPostRequestDecoder httpPostRequestDecoder) throws IOException {
-		Map<String, List<String>> params = new HashMap<String, List<String>>();
+		if (params == null) {
+			params = new HashMap<String, List<String>>();
+		}
 		if (httpPostRequestDecoder == null) {
-			return params;
+			return;
 		}
 		List<InterfaceHttpData> datas = httpPostRequestDecoder
 				.getBodyHttpDatas();
@@ -101,10 +124,31 @@ public class ZeroOneHttpRequest {
 						params.put(key, ori);
 					}
 					ori.add(value);
+				} else if (data instanceof FileUpload) {
+					if (files == null) {
+						files = new HashMap<String, List<FileItem>>();
+					}
+					FileUpload fileupload = (FileUpload) data;
+					String name = fileupload.getName();
+					String filename = fileupload.getFilename();
+					ByteBuf content = fileupload.getByteBuf();
+					List<FileItem> ori = files.get(filename);
+					if (ori == null) {
+						ori = new ArrayList<FileItem>(1);
+						files.put(name, ori);
+					}
+					ori.add(new FileItem(filename, content, fileupload
+							.getContentType(), content == null ? 0 : content
+							.readableBytes()));
 				}
 			}
 		}
-		return params;
+	}
+
+	public List<FileItem> getFiles(String filename) {
+		if (files == null)
+			return null;
+		return files.get(filename);
 	}
 
 	public String getReferer() {
@@ -219,6 +263,10 @@ public class ZeroOneHttpRequest {
 
 	public void setPath(String path) {
 		this.path = path;
+	}
+
+	public Map<String, List<FileItem>> getFiles() {
+		return files;
 	}
 
 }

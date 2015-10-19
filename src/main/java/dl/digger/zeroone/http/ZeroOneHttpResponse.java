@@ -87,6 +87,7 @@ public class ZeroOneHttpResponse {
 	public void write(byte[] bytes) {
 		if (bytes != null && bytes.length > 0) {
 			content.writeBytes(bytes);
+			//Unpooled.wrappedBuffer(bytes);
 		}
 	}
 
