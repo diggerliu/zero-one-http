@@ -16,6 +16,8 @@ import io.netty.handler.codec.http.HttpResponseEncoder;
 
 import java.io.File;
 import java.net.InetSocketAddress;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
@@ -100,7 +102,12 @@ public class HttpServerConfig {
 						id = httpconfig.value();
 						adapter.setId(id);
 					}
-					adapter.setReferer(httpconfig.referer());
+					String referers = httpconfig.referer();
+					if (!StringUtils.isEmpty(referers)) {
+						String[] referer_array = referers.split("\\|");
+						adapter.setReferers(referer_array);
+					}
+
 					adapter.setCsrf(httpconfig.csrf());
 					adapter.setPostOnly(httpconfig.postOnly());
 					Class<? extends Out> outclazz = httpconfig.out();
@@ -146,10 +153,8 @@ public class HttpServerConfig {
 					int code = ErrorCode.OK;
 					Object result_obj = null;
 					String msg = null;
-					Map<String, Object> result = null;
 					try {
-						Object obj = adapter.process(context);
-						result_obj = obj;
+						result_obj = adapter.process(context);
 					} catch (CmdException e) {
 						// TODO
 						logger.error("service error:", e);
@@ -160,38 +165,38 @@ public class HttpServerConfig {
 						code = ErrorCode.CMD_SERVICE_UNKNOW_ERROR;
 						msg = e.getMessage();
 					} finally {
-
-						if (!(adapter.getOut() instanceof NoOut)) {
-							result = Utils.getResultMap(code, result_obj, msg);
-							adapter.out(result, context);
-						}
-						DefaultFullHttpResponse respnose = context
-								.getResponse().getDefaultFullHttpResponse();
-						ACCESS_LOGGER.info(
-								"200,{},{},{},{}",
-								code,
-								System.currentTimeMillis()
-										- context.getStartTime(), context
-										.getRequest().getAllParams(), msg);
-
-						ChannelFuture future = context.getCtx().writeAndFlush(
-								respnose);
-						boolean keepAlive = HttpHeaders.isKeepAlive(context
-								.getRequest().getRequest());
-						if (keepAlive) {
-							HttpHeaders headers = respnose.headers();
-							headers.set(HttpHeaders.Names.CONTENT_LENGTH,
-									String.valueOf(respnose.content()
-											.readableBytes()));
-							headers.set(HttpHeaders.Names.CONNECTION,
-									HttpHeaders.Values.KEEP_ALIVE);
-						} else {
-							future.addListener(ChannelFutureListener.CLOSE);
-						}
+						out(code, result_obj, msg, context);
 					}
 
 				}
 			}
+		}
+	}
+
+	private void out(int rtn, Object data, String msg, CmdHttpContext context) {
+		CmdHttpAdapter adapter = context.getAdapter();
+		Map<String, Object> result = null;
+		if (!(adapter.getOut() instanceof NoOut)) {
+			result = Utils.getResultMap(rtn, data, msg);
+			adapter.out(result, context);
+		}
+		DefaultFullHttpResponse respnose = context.getResponse()
+				.getDefaultFullHttpResponse();
+		ACCESS_LOGGER.info("200,{},{},{},{}", rtn, System.currentTimeMillis()
+				- context.getStartTime(), context.getRequest().getAllParams(),
+				msg);
+
+		ChannelFuture future = context.getCtx().writeAndFlush(respnose);
+		boolean keepAlive = HttpHeaders.isKeepAlive(context.getRequest()
+				.getRequest());
+		if (keepAlive) {
+			HttpHeaders headers = respnose.headers();
+			headers.set(HttpHeaders.Names.CONTENT_LENGTH,
+					String.valueOf(respnose.content().readableBytes()));
+			headers.set(HttpHeaders.Names.CONNECTION,
+					HttpHeaders.Values.KEEP_ALIVE);
+		} else {
+			future.addListener(ChannelFutureListener.CLOSE);
 		}
 	}
 
@@ -218,40 +223,80 @@ public class HttpServerConfig {
 			}
 			return;
 		}
-
-		checkRequest(adapter, request);
-
 		// TODO directBuffer ?
 		ZeroOneHttpResponse response = new ZeroOneHttpResponse(
 				Unpooled.buffer(0));// default 512 bytes
 
 		CmdHttpContext context = new CmdHttpContext(request, response, adapter,
 				ctx);
-		try {
-			liveCmds.offer(context, 500, TimeUnit.MILLISECONDS);
-		} catch (InterruptedException e) {
-			logger.error("liveCmds offer error,InterruptedException close ctx",
-					e);
-			ctx.close();
-		} catch (NullPointerException e) {
-			logger.error(
-					"liveCmds offer error ,NullPointerException close ctx", e);
-			ctx.close();
-		} catch (Throwable e) {
-			logger.error("liveCmds offer error ,Throwable close ctx", e);
-			ctx.close();
+		int check_code = checkRequest(adapter, request);
+		if (check_code == 0) {
+			try {
+				liveCmds.offer(context, 500, TimeUnit.MILLISECONDS);
+			} catch (InterruptedException e) {
+				logger.error(
+						"liveCmds offer error,InterruptedException close ctx",
+						e);
+				ctx.close();
+			} catch (NullPointerException e) {
+				logger.error(
+						"liveCmds offer error ,NullPointerException close ctx",
+						e);
+				ctx.close();
+			} catch (Throwable e) {
+				logger.error("liveCmds offer error ,Throwable close ctx", e);
+				ctx.close();
+			}
+		} else {
+			out(check_code, null, "", context);
+
 		}
 
 	}
 
-	private void checkRequest(CmdHttpAdapter adapter, ZeroOneHttpRequest request) {
+	private int checkRequest(CmdHttpAdapter adapter, ZeroOneHttpRequest request) {
 		// referer check
-
-		// csrf check
-
+		String[] referers = adapter.getReferers();
+		if (!StringUtils.isEmpty(referers)) {
+			boolean isReferer = false;
+			String req_referer = request.getReferer();
+			if (StringUtils.isEmpty(req_referer)) {
+				for (String referer : referers) {
+					if (referer.equals("null")) {
+						isReferer = true;
+						break;
+					}
+				}
+			}else{
+				try {
+					URL url = new URL(req_referer);
+					String host = url.getHost();
+					//String scheme = url.getProtocol();
+					for (String referer : referers) {
+						if (StringUtils.endsWithIgnoreCase(host, referer)) {
+							isReferer = true;
+							break;
+						}
+					}
+				} catch (MalformedURLException e) {
+					logger.error("url excetion", e);
+					return ErrorCode.CMD_REFERER_ERROR;
+				}
+			}
+			if (!isReferer) {
+				logger.error("referer error {}", request.getReferer());
+				return ErrorCode.CMD_REFERER_ERROR;
+			}
+		}
 		// postOnly check
-
-		// param check?
+		if(adapter.isPostOnly()){
+			if(!request.getMethod().equals("POST")){
+				return ErrorCode.CMD_POST_ONLY;
+			}
+		}
+		// param check?csrf check?
+		// TODO
+		return 0;
 	}
 
 	public ApplicationContext getContext() {

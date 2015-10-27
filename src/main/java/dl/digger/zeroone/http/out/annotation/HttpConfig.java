@@ -18,7 +18,7 @@ public @interface HttpConfig {
 
 	boolean postOnly() default false;
 
-	String referer() default "NULL|*";
+	String referer() default "";
 
 	boolean csrf() default false;
 

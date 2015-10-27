@@ -11,7 +11,7 @@ public class CmdHttpAdapter {
 	private HttpCmd cmd;
 	private int timeout = 1000;// default 1s
 	private Out out;
-	private String referer;
+	private String[] referers;
 	private boolean csrf;
 	private boolean postOnly;
 	private String template;
@@ -62,14 +62,6 @@ public class CmdHttpAdapter {
 		this.out = out;
 	}
 
-	public String getReferer() {
-		return referer;
-	}
-
-	public void setReferer(String referer) {
-		this.referer = referer;
-	}
-
 	public boolean isCsrf() {
 		return csrf;
 	}
@@ -92,5 +84,13 @@ public class CmdHttpAdapter {
 
 	public void setTemplate(String template) {
 		this.template = template;
+	}
+
+	public String[] getReferers() {
+		return referers;
+	}
+
+	public void setReferers(String[] referers) {
+		this.referers = referers;
 	}
 }
